@@ -49,6 +49,9 @@ export interface Env {
 	/** Client mode only: your own Stripe account's secret key and webhook signing secret, so clients can pay you. */
 	STRIPE_SECRET_KEY?: string;
 	STRIPE_WEBHOOK_SECRET?: string;
+	/** Optional Cloudflare Turnstile on the sign-in forms (src/guard.ts): both needed, added as secrets so updates keep them. */
+	TURNSTILE_SITE_KEY?: string;
+	TURNSTILE_SECRET?: string;
 }
 
 // Websites that get the affiliate link tagger (src/tracker.ts TAGGER) added to their script: those with a network

@@ -1,5 +1,10 @@
 # What's new in ReaderCount
 
+## 1.1.0: Optional robot check
+_2026-11-04_
+
+- The sign-in page can now use Cloudflare Turnstile. It's off until you add your own widget's keys to the Worker (see Robot check in the README).
+
 ## 1.0.1: Releases straight from GitHub
 _2026-11-04_
 
