@@ -713,6 +713,23 @@ test("security: wrong-website hits, password-guessing floods, per-IP limits and 
 	assert.equal(reg.status, 429);
 	delete env.FORM_LIMIT;
 
+	// Cloudflare Turnstile, once both keys are set: the page shows the box and sign-in needs a genuine answer.
+	assert.ok(!(await (await app("/signin")).text()).includes("cf-turnstile"), "off without the keys");
+	env.TURNSTILE_SITE_KEY = "site-key";
+	env.TURNSTILE_SECRET = "secret-key";
+	assert.ok((await (await app("/signin")).text()).includes('data-sitekey="site-key"'));
+	assert.equal((await post({ password: "the-right-password" })).status, 403, "no answer, no sign-in");
+	const realFetch = globalThis.fetch;
+	globalThis.fetch = (async (_u: unknown, init?: RequestInit) => Response.json({ success: (init!.body as FormData).get("response") === "good" })) as typeof fetch;
+	try {
+		assert.equal((await post({ password: "the-right-password", "cf-turnstile-response": "bad" })).status, 403);
+		assert.equal((await post({ password: "the-right-password", "cf-turnstile-response": "good" })).status, 303);
+	} finally {
+		globalThis.fetch = realFetch;
+		delete env.TURNSTILE_SITE_KEY;
+		delete env.TURNSTILE_SECRET;
+	}
+
 	// Pages can't be framed by other websites; public stats pages can. A broken /share/ address is a 404, not a crash.
 	assert.equal((await app("/signin")).headers.get("Content-Security-Policy"), "frame-ancestors 'none'");
 	assert.equal((await app("/share/%")).status, 404);

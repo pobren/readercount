@@ -152,6 +152,15 @@ Client mode lets an agency or host offer ReaderCount to their own clients, under
 
 A client whose subscription stops sees the plans page until they pick one, and their websites stop being counted.
 
+## Robot check (optional)
+
+The sign-in page can use [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/), Cloudflare's free check that a person is using the form. Most people see nothing; a few are asked to tick a box. Wrong passwords are already limited, so this is an extra layer.
+
+1. In Cloudflare, open **Turnstile** and add a widget. Use your ReaderCount address as its hostname and choose **Managed**.
+2. On the Worker, open **Settings › Variables and Secrets** and add two secrets: `TURNSTILE_SITE_KEY` (the site key) and `TURNSTILE_SECRET` (the secret key). Add both as secrets, so updates keep them.
+
+It switches on once both are there. Remove either one to switch it off.
+
 ## Privacy
 
 ReaderCount sets no cookies and stores nothing in your readers' browsers. A visitor is counted once a day with a code made from a daily secret, so nobody can be followed from one day to the next. It never records what anyone typed, where they clicked or their IP address. Everything stays in your own Cloudflare account. Set `RETENTION_DAYS` in `wrangler.jsonc` to delete visits after that many days.

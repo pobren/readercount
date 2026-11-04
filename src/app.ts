@@ -22,7 +22,7 @@ import { siteHealth } from "./health.ts";
 import { connectNetwork, disconnectNetwork, NETWORKS, needsSecret, networksFor, setTagging, taggingOn, type NetworkState } from "./affiliates.ts";
 import { addTrigger, KINDS, listTriggers, NOTIFY, readTrigger, removeTrigger, triggerCounts, type Trigger } from "./triggers.ts";
 import { addNote, forgetHistory, historySummary, MAX_FILE_BYTES, notesBetween, parseHistory, removeNote, saveHistory } from "./history.ts";
-import { clientIp, overLimit } from "./guard.ts";
+import { clientIp, overLimit, turnstileOk, turnstileOn } from "./guard.ts";
 import { handleMcp } from "./mcp.ts";
 import { accountPlan, LICENCE_SITES, type PlanState } from "./plans.ts";
 import { HOME_URL, REPO_URL } from "./host.ts";
@@ -350,9 +350,11 @@ function signInPage(env: Env, next: string, error = "", status = 200, clients = 
 			503,
 		);
 	}
+	// Cloudflare Turnstile, when both keys are set: a box in each form that most people never see (guard.ts).
+	const ts = turnstileOn(env) ? `<div class="cf-turnstile" data-sitekey="${esc(env.TURNSTILE_SITE_KEY!)}" data-appearance="interaction-only"></div>` : "";
 	return renderPage(
 		"Sign in",
-		`<h1>Sign in to ReaderCount</h1><p>Enter the password you chose when you set up ReaderCount.</p>${err}<form method="post" action="/signin" class="f"><input type="hidden" name="next" value="${esc(next)}"><input type="text" name="username" value="ReaderCount" autocomplete="username" hidden><label for="password">Password</label><input id="password" type="password" name="password" autocomplete="current-password" required autofocus><button class="go" type="submit">Sign in</button></form><p class="hint">Forgotten it? Set a new <code>ADMIN_PASSWORD</code> secret for this Worker in the Cloudflare dashboard.</p>${clients && env.EMAIL ? `<h2>Signing in as a client?</h2><p>We'll email you a link that signs you in.</p><form method="post" action="/signin/email" class="f"><label for="email">Your email address</label><input id="email" type="email" name="email" autocomplete="email" required><button class="go" type="submit">Email me a sign-in link</button></form>` : ""}`,
+		`${ts ? '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>' : ""}<h1>Sign in to ReaderCount</h1><p>Enter the password you chose when you set up ReaderCount.</p>${err}<form method="post" action="/signin" class="f"><input type="hidden" name="next" value="${esc(next)}"><input type="text" name="username" value="ReaderCount" autocomplete="username" hidden><label for="password">Password</label><input id="password" type="password" name="password" autocomplete="current-password" required autofocus>${ts}<button class="go" type="submit">Sign in</button></form><p class="hint">Forgotten it? Set a new <code>ADMIN_PASSWORD</code> secret for this Worker in the Cloudflare dashboard.</p>${clients && env.EMAIL ? `<h2>Signing in as a client?</h2><p>We'll email you a link that signs you in.</p><form method="post" action="/signin/email" class="f"><label for="email">Your email address</label><input id="email" type="email" name="email" autocomplete="email" required>${ts}<button class="go" type="submit">Email me a sign-in link</button></form>` : ""}`,
 		status,
 	);
 }
@@ -364,11 +366,20 @@ async function signIn(request: Request, env: Env, url: URL, now: number): Promis
 	if (await overLimit(env.FORM_LIMIT, "signin:" + clientIp(request))) return signInPage(env, "/", "Too many tries from here. Please wait a minute and try again.", 429);
 	const form = await request.formData();
 	const next = safeNext(form.get("next"));
+	if (!(await robotOk(env, request, form))) return signInPage(env, next, ROBOT_ERROR, 403, await clientsOn(env.DB, now));
 	const done = await checkPassword(env.DB, env, form.get("password"), now);
 	if ("error" in done) return signInPage(env, next, done.error, 400);
 	// Remembered for emails sent on a schedule, which have no request to take the address from.
 	await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('app_host', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind(url.host).run();
 	return see(next, { "Set-Cookie": sessionCookie(done.token) });
+}
+
+const ROBOT_ERROR = "We couldn't check you're a person. Please try again, and tick the box if one appears.";
+/** True when Turnstile is off, or the form's answer from it is genuine. */
+async function robotOk(env: Env, request: Request, form: FormData): Promise<boolean> {
+	if (!turnstileOn(env)) return true;
+	const token = form.get("cf-turnstile-response");
+	return turnstileOk(env.TURNSTILE_SECRET!, typeof token === "string" ? token : "", clientIp(request));
 }
 
 /** A client asks for a sign-in link by email (client mode). */
@@ -377,6 +388,7 @@ async function emailLink(request: Request, env: Env, url: URL, now: number): Pro
 	if (!(await clientsOn(env.DB, now))) return see("/signin");
 	if (await overLimit(env.FORM_LIMIT, "signin:" + clientIp(request))) return signInPage(env, "/", "Too many tries from here. Please wait a minute and try again.", 429, true);
 	const form = await request.formData();
+	if (!(await robotOk(env, request, form))) return signInPage(env, "/", ROBOT_ERROR, 403, true);
 	const error = await emailSignInLink(env.DB, env.EMAIL, mailFrom(env), form.get("email"), url.origin, now);
 	if (error) return signInPage(env, "/", error, 400, true);
 	return renderPage("Check your email", `<h1>Check your email</h1><p>If that address has an account here, a sign-in link is on its way. It works once, for the next 30 minutes.</p>`);
