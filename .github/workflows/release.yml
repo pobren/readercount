@@ -43,10 +43,7 @@ jobs:
       - run: npm run package
       - name: Publish to npm
         working-directory: npm
-        # Trusted publishing: npm checks this workflow by its GitHub sign-in, so no token is needed. The very first
-        # release can't use it (npm only sets it up for a package that exists), so it uses an NPM_TOKEN secret if there is one.
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # Trusted publishing: npm checks this workflow by its GitHub sign-in, so no token is needed (set up 4 Nov 2026).
         run: npm install -g npm@11 && npm publish --provenance --access public
       - name: GitHub release
         env:

@@ -1,5 +1,10 @@
 # What's new in ReaderCount
 
+## 1.0.1: Releases straight from GitHub
+_2026-11-04_
+
+- Signed releases: new versions now go to npm straight from GitHub, with a signature you can check on npm. Nothing changes in the app.
+
 ## 1.0.0: Free on your own Cloudflare
 _2026-11-04_
 
