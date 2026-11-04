@@ -1,0 +1,35 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "readercount",
+	"main": "./src/index.ts",
+	"compatibility_date": "2025-11-28",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "readercount",
+			// Filled in for you by Deploy to Cloudflare or the installer. By hand: `npx wrangler d1 create readercount`.
+			"migrations_dir": "./migrations"
+		}
+	],
+	"vars": {
+		// Delete visits older than this many days; "0" keeps everything.
+		"RETENTION_DAYS": "0"
+		// Optional, see the README:
+		// "OWNER_EMAIL": "you@example.com",   where alerts and reports go
+		// "MAIL_FROM": "stats@example.com",   the address they come from
+		// "APP_HOST": "stats.example.com"     this ReaderCount's own address, if you use more than one
+	},
+	// Per-address limits: hits to /e (a real reader sends a handful a minute), and the sign-in form.
+	// namespace_id only has to be unique within your Cloudflare account.
+	"ratelimits": [
+		{ "name": "COLLECT_LIMIT", "namespace_id": "4801", "simple": { "limit": 120, "period": 60 } },
+		{ "name": "FORM_LIMIT", "namespace_id": "4802", "simple": { "limit": 10, "period": 60 } }
+	],
+	// To send alert and report emails, switch on Email Routing or Email Sending for your domain, then add:
+	// "send_email": [{ "name": "EMAIL" }],
+	// Nightly tidy-up, Monday digest, hourly spike check, monthly review, and the 5-minute site-down check.
+	"triggers": { "crons": ["5 0 * * *", "0 7 * * MON", "0 * * * *", "0 7 1 * *", "*/5 * * * *"] },
+	// To serve ReaderCount from your own address (fewer ad blockers), add a custom domain:
+	// "routes": [{ "pattern": "stats.example.com", "custom_domain": true }],
+	"observability": { "enabled": true }
+}

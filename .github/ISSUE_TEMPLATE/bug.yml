@@ -1,0 +1,29 @@
+name: Report a bug
+description: Something in ReaderCount isn't working as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Screenshots help.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ReaderCount version
+      description: Shown under What's new on your stats page, such as "1.0.0".
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - The Deploy to Cloudflare button
+        - The installer (npx @mrpwob/readercount)
+        - From the code (npm run deploy)
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Chrome on Windows, Safari on iPhone…

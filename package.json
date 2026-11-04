@@ -1,0 +1,43 @@
+{
+	"name": "readercount",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Private, cookie-free website stats that run on your own Cloudflare account.",
+	"license": "SEE LICENSE IN LICENSE",
+	"type": "module",
+	"homepage": "https://paulobrien.dev/readercount/",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/pobren/readercount.git"
+	},
+	"bugs": {
+		"url": "https://github.com/pobren/readercount/issues"
+	},
+	"scripts": {
+		"deploy": "node scripts/deploy.mjs",
+		"dev": "wrangler d1 migrations apply readercount --local && wrangler dev",
+		"test": "node --experimental-strip-types --test test/*.test.ts",
+		"typecheck": "tsc -p .",
+		"package": "node scripts/package.mjs"
+	},
+	"engines": {
+		"node": ">=22"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20261019.1",
+		"typescript": "^5.8.3",
+		"wrangler": "^4.154.0"
+	},
+	"cloudflare": {
+		"label": "ReaderCount",
+		"products": [
+			"Workers",
+			"D1"
+		],
+		"bindings": {
+			"ADMIN_PASSWORD": {
+				"description": "The password you'll sign in to your stats with. Use at least 12 characters and replace the example, which won't work."
+			}
+		}
+	}
+}
